@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Cotizaciones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+       body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+        }
+        /* Estilos para asegurar que los elementos interactivos sean fácilmente tocables */
+        input, select, button {
+            min-height: 44px; /* Tamaño mínimo para facilitar el toque */
+            padding: 0.75rem; /* Espaciado interno */
+            border-radius: 0.375rem; /* rounded-md, para consistencia */
+        }
+        .producto input {
+            flex-grow: 1;
+        }
+        /* Asegurar que el botón de eliminar tenga un tamaño adecuado */
+        .producto .eliminar {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Estilos para el contenedor principal y el encabezado */
+        /* Las clases de Tailwind en el HTML ya manejan la mayoría de estos estilos */
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        } 
+        .header-section {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Centrar el título */
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .header-title {
+            text-align: center;
+            /* flex-grow: 1; ya no es necesario si solo hay un elemento y se centra */
+        }
+        /* El logo en el HTML es solo un placeholder, el real se inyecta en el PDF */
+        .header-logo {
+            display: none; /* Ocultar el logo del encabezado HTML si no se desea mostrar */
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Generador de Cotizaciones</h1>
+
+        <form id="cotizacionForm" class="space-y-4">
+            <div class="mb-4">
+                <label for="cliente" class="block text-gray-700 text-sm font-bold mb-2">Nombre del Cliente:</label>
+                <input type="text" id="cliente" class="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Nombre del Cliente" required>
+            </div>
+
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Productos/Servicios:</h2>
+            <div id="productos" class="space-y-3">
+                <div class="producto flex flex-col sm:flex-row gap-2 mb-2 p-2 border rounded-md bg-gray-50">
+                    <input type="text" placeholder="Descripción" class="descripcion p-2 border rounded-md flex-grow" required>
+                    <input type="number" placeholder="Cantidad" class="cantidad p-2 border rounded-md w-full sm:w-24" required min="1">
+                    <input type="number" placeholder="Precio unitario" class="precio p-2 border rounded-md w-full sm:w-32" required min="0.01" step="0.01">
+                    <button type="button" class="eliminar bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors">X</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-4 mb-4">
+                <button type="button" id="agregarProducto" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors w-full sm:w-auto">Agregar Producto</button>
+                <div id="ivaSelectContainer"></div> </div>
+            
+            <button type="submit" class="bg-green-500 text-white p-3 rounded-md hover:bg-green-600 transition-colors w-full">Generar Cotización</button>
+        </form>
+
+        <div id="preview" class="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner hidden">
+            </div>
+
+        <button id="descargarPDF" class="mt-4 bg-purple-600 text-white p-3 rounded-md hover:bg-purple-700 transition-colors w-full hidden">Descargar PDF</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Obtener referencias a los elementos del DOM
+            const productosDiv = document.getElementById('productos');
+            const agregarBtn = document.getElementById('agregarProducto');
+            const form = document.getElementById('cotizacionForm');
+            const previewDiv = document.getElementById('preview');
+            const descargarBtn = document.getElementById('descargarPDF');
+
+            /**
+             * Genera un folio único para la cotización.
+             * El folio se compone de la fecha actual (AA-MM-DD) y un número consecutivo.
+             * El número consecutivo se guarda en localStorage para persistencia.
+             * @returns {string} El folio generado.
+             */
+            function generarFolio() {
+                // Obtener el último número de folio guardado, o 0 si no existe
+                const lastFolio = parseInt(localStorage.getItem('lastFolio') || '0');
+                // Incrementar el número de folio
+                const newFolio = lastFolio + 1;
+                // Guardar el nuevo número de folio en localStorage
+                localStorage.setItem('lastFolio', newFolio.toString());
+
+                // Obtener la fecha actual
+                const date = new Date();
+                // Obtener los últimos dos dígitos del año
+                const year = date.getFullYear().toString().slice(-2);
+                // Obtener el mes y asegurar que tenga dos dígitos (ej. 01, 12)
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                // Obtener el día y asegurar que tenga dos dígitos (ej. 01, 31)
+                const day = date.getDate().toString().padStart(2, '0');
+
+                // Formatear el folio: COT-AAMMDD-NNN (ej. COT-240526-001)
+                return `COT-${year}${month}${day}-${newFolio.toString().padStart(3, '0')}`;
+            }
+
+            /**
+             * Convierte un número a su representación en letras para cantidades monetarias.
+             * @param {number} num - El número a convertir.
+             * @returns {string} La representación en letras del número.
+             */
+            function numeroALetras(num) {
+                const unidades = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+                const decenas = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+                const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+                const especiales = {
+                    11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
+                    16: 'dieciséis', 17: 'diecisiete', 18: 'dieciocho', 19: 'diecinueve'
+                };
+
+                let entero = Math.floor(num);
+                let decimal = Math.round((num - entero) * 100);
+                let letras = [];
+
+                // Manejo de miles
+                if (entero >= 1000) {
+                    const miles = Math.floor(entero / 1000);
+                    // Recursivamente obtener las letras para los miles
+                    const letrasMiles = numeroALetras(miles).split(' pesos')[0];
+                    if (miles === 1) letras.push('mil');
+                    else letras.push(`${letrasMiles} mil`);
+                    entero %= 1000;
+                }
+
+                // Centenas
+                if (entero >= 100) {
+                    if (entero === 100) letras.push('cien');
+                    else letras.push(centenas[Math.floor(entero / 100)]);
+                    entero %= 100;
+                }
+
+                // Decenas y unidades
+                if (entero > 0) {
+                    if (especiales[entero]) {
+                        letras.push(especiales[entero]);
+                    } else {
+                        const d = Math.floor(entero / 10);
+                        const u = entero % 10;
+
+                        if (d > 0) {
+                            letras.push(decenas[d]);
+                            if (u > 0 && d > 2) letras.push('y');
+                        }
+                        if (u > 0) letras.push(unidades[u]);
+                    }
+                }
+
+                // Formateo final
+                let resultado = letras.join(' ').trim();
+
+                // Manejo de casos especiales
+                if (resultado === 'ciento') resultado = 'cien';
+                if (resultado.endsWith(' y')) resultado = resultado.slice(0, -2);
+
+                // Decimales y sufijo
+                const centavos = decimal.toString().padStart(2, '0');
+                return `${resultado} pesos ${centavos}/100 M.N.`.replace(/^ /, '').replace(/\s+/g, ' ');
+            }
+
+            // Event listener para agregar un nuevo producto
+            agregarBtn.addEventListener('click', () => {
+                const nuevoProducto = document.createElement('div');
+                nuevoProducto.className = 'producto flex flex-col sm:flex-row gap-2 mb-2 p-2 border rounded-md bg-gray-50';
+                nuevoProducto.innerHTML = `
+                    <input type="text" placeholder="Descripción" class="descripcion p-2 border rounded flex-grow" required>
+                    <input type="number" placeholder="Cantidad" class="cantidad p-2 border rounded w-24" required min="1">
+                    <input type="number" placeholder="Precio unitario" class="precio p-2 border rounded w-32" required min="0.01" step="0.01">
+                    <button type="button" class="eliminar bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors">X</button>
+                `;
+                productosDiv.appendChild(nuevoProducto);
+            });
+
+            // Event listener para eliminar un producto
+            productosDiv.addEventListener('click', (e) => {
+                if (e.target.classList.contains('eliminar')) {
+                    e.target.parentElement.remove();
+                }
+            });
+
+            // Crear y añadir el selector de IVA
+            const ivaSelect = document.createElement('select');
+            ivaSelect.className = 'p-2 border rounded mb-4 w-full sm:w-auto focus:ring-blue-500 focus:border-blue-500';
+            ivaSelect.innerHTML = `
+                <option value="0.16">IVA 16%</option>
+                <option value="0.00">Sin IVA</option>
+            `;
+            // Insertar el selector de IVA antes del botón de submit del formulario
+            form.insertBefore(ivaSelect, form.querySelector('button[type="submit"]'));
+
+            /**
+             * Genera el documento PDF de la cotización.
+             * @param {string} cliente - Nombre del cliente.
+             * @param {Array<Object>} productos - Lista de productos con descripción, cantidad y precio.
+             * @param {number} subtotal - Subtotal de la cotización.
+             * @param {number} iva - Monto del IVA.
+             * @param {number} total - Total de la cotización.
+             * @param {string} fecha - Fecha de la cotización.
+             * @param {string} folio - Folio de la cotización.
+             */
+            const generarPDF = (cliente, productos, subtotal, iva, total, fecha, folio) => {
+                const doc = new jspdf.jsPDF(); // Inicializar jsPDF
+                let yPos = 25; // Posición vertical inicial para el contenido
+
+                // ** CONFIGURACIÓN DEL LOGO EN EL PDF (USANDO BASE64) **
+                // Pega tu cadena Base64 aquí. Debe comenzar con 'data:image/<tipo>;base64,'.
+                // Ejemplo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAABaP246AAAAAXNSR0IArs4c6QAAAyhJREFU...'
+                const base64Image = 'data:image/jpeg;base64,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';
+                const logoBase64 = 'data:image/jpeg;base64,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'; // <-- PEGA TU CADENA BASE64 AQUÍ
+
+                const logoWidth = 40;  // Ancho del logo en el PDF (ajusta según sea necesario)
+                const logoHeight = 20; // Alto del logo en el PDF (ajusta según sea necesario)
+                const logoX = 15;      // Posición X del logo desde el borde izquierdo
+                const logoY = 15;      // Posición Y del logo desde el borde superior
+
+                // Añadir el logo al documento PDF
+                if (logoBase64) { // Solo añade el logo si la cadena Base64 no está vacía
+                    doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+                }
+                // ** FIN CONFIGURACIÓN DEL LOGO **
+
+                // Encabezado de la cotización
+                doc.setFontSize(14);
+                doc.setTextColor(44, 62, 80); // Color azul oscuro
+                doc.setFont("helvetica", "bold");
+                // Ajustar la posición del título para que no se superponga con el logo
+                doc.text("COTIZACIÓN", 105, 25, { align: 'center' });
+
+                // Información de la empresa (ajustar posición X para que esté a la derecha del logo)
+                const companyInfoX = logoX + logoWidth + 10; // Espacio entre el logo y la información de la empresa
+                doc.setFontSize(9);
+                doc.setTextColor(127, 140, 141); // Color gris
+                doc.text("RAZON SOCIAL: JOSE ALEJANDRO SANCHEZ ROMERO", companyInfoX, 35);
+                doc.text("RFC: SARA970607L59", companyInfoX, 40);
+            
+
+                // Folio de la cotización
+                doc.setFontSize(11);
+                doc.setTextColor(0); // Color negro
+                doc.text(`Folio: ${folio}`, 15, 55); // Posición del folio en el PDF
+
+                // Datos del cliente y fecha
+                doc.text(`Cliente: ${cliente}`, 15, 60);
+                doc.text(`Fecha: ${fecha}`, 15, 65);
+
+                // Leyenda antes de la tabla de productos
+                yPos = 70;
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "italic");
+                doc.text("Por medio de la presente ponemos a su consideración la siguiente cotización detallando los conceptos siguientes:", 15, yPos);
+                yPos += 10; // Espacio después de la leyenda
+
+                // Configuración de la tabla de productos (COLUMNAS AJUSTADAS)
+                const headers = ["Descripción", "Cantidad", "P. Unitario", "Subtotal"];
+                // Nuevas posiciones X para cada columna: Descripción más ancha, Cantidad más estrecha
+                const columns = [15, 95, 125, 165];
+
+                yPos = 75; // Posición inicial de la cabecera de la tabla
+                doc.setFillColor(44, 62, 80); // Color de fondo para la cabecera
+                doc.rect(10, yPos, 190, 8, 'F'); // Dibujar el rectángulo de la cabecera
+
+                // Escribir los encabezados de la tabla
+                doc.setTextColor(255); // Color de texto blanco
+                headers.forEach((header, index) => {
+                    doc.text(header, columns[index], yPos + 6);
+                });
+
+                // Escribir las filas de productos
+                yPos += 12; // Espacio después de la cabecera
+                doc.setTextColor(0); // Color de texto negro
+                productos.forEach((item) => {
+                    if (yPos > 250) { // Si se acerca al final de la página, añadir una nueva página
+                        doc.addPage();
+                        yPos = 30; // Reiniciar la posición Y en la nueva página
+                    }
+
+                    // Dividir la descripción si es muy larga para caber en una línea (ANCHO AJUSTADO)
+                    const descLines = doc.splitTextToSize(item.descripcion, 75);
+                    doc.text(descLines, columns[0], yPos); // Descripción
+                    doc.text(item.cantidad.toString(), columns[1], yPos); // Cantidad
+                    doc.text(`$${item.precio.toFixed(2)}`, columns[2], yPos); // Precio unitario
+                    doc.text(`$${(item.cantidad * item.precio).toFixed(2)}`, columns[3], yPos); // Subtotal por producto
+
+                    // Ajustar la posición Y para el siguiente producto, considerando múltiples líneas de descripción
+                    yPos += Math.max(12, descLines.length * 8);
+                });
+
+                // Totales de la cotización
+                yPos += 20; // Espacio después de la tabla de productos
+                doc.setFontSize(11);
+                doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 150, yPos);
+                doc.text(`IVA (${(ivaSelect.value * 100).toFixed(0)}%): $${iva.toFixed(2)}`, 150, yPos + 8);
+                doc.setFontSize(13);
+                doc.text(`Total: $${total.toFixed(2)}`, 150, yPos + 20);
+
+                // Cantidad en letras (centrada)
+                doc.setFontSize(10);
+                const textoLetras = `Cantidad con letra: ${numeroALetras(total)}`;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const textWidth = doc.getTextWidth(textoLetras);
+                doc.text(textoLetras, (pageWidth - textWidth) / 2, yPos + 35);
+
+                // Sección de observaciones y datos bancarios
+                yPos += 45; // Espacio después del total
+
+                // Texto en rojo para advertencias
+                doc.setFontSize(9);
+                doc.setTextColor(255, 0, 0); // Color rojo
+                doc.text("* Precios sujetos a cambio sin previo aviso", 15, yPos);
+                doc.text("* Según existencia en almacén", 15, yPos + 5);
+                doc.text("* Cotización vigente 5 días hábiles", 15, yPos + 10);
+
+                // Información bancaria
+                yPos += 20;
+                doc.setTextColor(0); // Color negro
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text("Información Bancaria para Depósitos y/o Transferencias:", 15, yPos);
+
+                // Detalles bancarios en dos columnas
+                doc.setFont("helvetica", "normal");
+                const column1 = 15;
+                const column2 = 60;
+
+                yPos += 8;
+                doc.text("Banco:", column1, yPos);
+                doc.text("BBVA", column2, yPos);
+
+                yPos += 6;
+                doc.text("Cuenta:", column1, yPos);
+                doc.text("0482562081", column2, yPos);
+
+                yPos += 6;
+                doc.text("CLABE:", column1, yPos);
+                doc.text("012905004825620819", column2, yPos);
+
+                yPos += 6;
+                doc.text("Correo:", column1, yPos);
+                doc.setTextColor(0, 0, 255); // Color azul para el email
+                doc.textWithLink(" rm.detalladoautomotriz@gmail.com", column2, yPos, { url: "mailto: rm.detalladoautomotriz@gmail.com" });
+
+                // Guardar el PDF con un nombre que incluye el folio
+                doc.save(`cotizacion_${cliente}_${folio}.pdf`);
+            };
+
+            /**
+             * Calcula el subtotal, IVA y total de los productos.
+             * @param {Array<Object>} productos - Lista de productos.
+             * @returns {{subtotal: number, iva: number, total: number}} Los totales calculados.
+             */
+            const calcularTotales = (productos) => {
+                // Calcular subtotal sumando el total de cada producto (cantidad * precio)
+                const subtotal = productos.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+                // Calcular IVA basado en el valor seleccionado en ivaSelect
+                const iva = subtotal * parseFloat(ivaSelect.value);
+                // Calcular el total
+                const total = subtotal + iva;
+                return { subtotal, iva, total };
+            };
+
+            // Event listener para el envío del formulario
+            form.addEventListener('submit', (e) => {
+                e.preventDefault(); // Prevenir el envío por defecto del formulario
+
+                // Obtener los datos del cliente y productos del formulario
+                const cliente = document.getElementById('cliente').value;
+                const productos = Array.from(document.querySelectorAll('.producto')).map(producto => ({
+                    descripcion: producto.querySelector('.descripcion').value,
+                    cantidad: parseFloat(producto.querySelector('.cantidad').value),
+                    precio: parseFloat(producto.querySelector('.precio').value)
+                }));
+
+                // Validar que al menos un producto tenga descripción, cantidad y precio
+                const isValid = productos.every(p => p.descripcion && p.cantidad > 0 && p.precio > 0);
+                if (!isValid) {
+                    // Reemplazar alert con un mensaje en la UI o un modal personalizado
+                    previewDiv.innerHTML = '<p class="text-red-500">Por favor, complete la descripción, cantidad y precio para todos los productos.</p>';
+                    previewDiv.classList.remove('hidden');
+                    descargarBtn.style.display = 'none';
+                    return;
+                }
+
+                // Calcular los totales
+                const { subtotal, iva, total } = calcularTotales(productos);
+                const fecha = new Date().toLocaleDateString(); // Obtener la fecha actual
+                const folio = generarFolio(); // ¡Generar el folio aquí!
+
+                // Actualizar la vista previa con los datos de la cotización, incluyendo el folio
+                previewDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold mb-2">Vista Previa</h3>
+                    <p class="mb-1"><strong>Folio:</strong> ${folio}</p>
+                    <p class="mb-1"><strong>Cliente:</strong> ${cliente}</p>
+                    <p class="mb-4"><strong>Fecha:</strong> ${fecha}</p>
+                    <table class="min-w-full bg-white border border-gray-300 rounded-md overflow-hidden mb-4">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left">Descripción</th>
+                                <th class="py-2 px-4 border-b text-left">Cantidad</th>
+                                <th class="py-2 px-4 border-b text-left">P. Unitario</th>
+                                <th class="py-2 px-4 border-b text-left">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productos.map(item => `
+                                <tr>
+                                    <td class="py-2 px-4 border-b">${item.descripcion}</td>
+                                    <td class="py-2 px-4 border-b">${item.cantidad}</td>
+                                    <td class="py-2 px-4 border-b">$${item.precio.toFixed(2)}</td>
+                                    <td class="py-2 px-4 border-b">$${(item.cantidad * item.precio).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="totales text-right text-lg">
+                        <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
+                        <p><strong>IVA:</strong> $${iva.toFixed(2)}</p>
+                        <h4 class="font-bold text-xl mt-2">Total: $${total.toFixed(2)}</h4>
+                    </div>
+                `;
+
+                // Mostrar la vista previa
+                previewDiv.classList.remove('hidden');
+
+                // Mostrar el botón de descarga y configurarlo para generar el PDF con el folio
+                descargarBtn.style.display = 'block';
+                descargarBtn.onclick = () => generarPDF(cliente, productos, subtotal, iva, total, fecha, folio); // ¡Pasar el folio a generarPDF!
+            });
+        });
+    </script>
+</body>
+</html>
