@@ -323,51 +323,87 @@
             yPos += leyendaLines.length * 3 + 3;
 
             const tableHeaders = ["Cant.", "Tipo", "Descripción", "P. Unitario", "Importe"];
-            const columnWidths = [15, 30, 85, 30, 30];
-            const startX = 15;
-            let currentX = startX;
+const columnWidths = [15, 30, 85, 30, 30];
+const startX = 15;
+let currentX = startX;
 
-            doc.setFillColor(44, 62, 80);
-            doc.rect(startX - 5, yPos - 2, columnWidths.reduce((a, b) => a + b, 0) + 10, 10, 'F');
-            doc.setTextColor(255);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
+doc.setFillColor(44, 62, 80);
+doc.rect(startX - 5, yPos - 2, columnWidths.reduce((a, b) => a + b, 0) + 10, 10, 'F');
+doc.setTextColor(255);
+doc.setFont("helvetica", "bold");
+doc.setFontSize(9);
 
-            tableHeaders.forEach((header, i) => {
-                doc.text(header, currentX, yPos + 5);
-                currentX += columnWidths[i];
-            });
-            yPos += 12;
+tableHeaders.forEach((header, i) => {
+    doc.text(header, currentX, yPos + 5);
+    currentX += columnWidths[i];
+});
+yPos += 12;
 
-            doc.setTextColor(0);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8.5);
+doc.setTextColor(0);
+doc.setFont("helvetica", "normal");
+doc.setFontSize(8.5);
 
-            productos.forEach((item) => {
-                if (yPos > 260) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                currentX = startX;
-                const rowHeight = 8;
-                let maxLines = 1;
-                doc.text(item.cantidad.toString(), currentX, yPos);
-                currentX += columnWidths[0];
-                const tipoText = item.tipo === 'material' ? 'Material' : 'M. Obra';
-                doc.text(tipoText, currentX, yPos);
-                currentX += columnWidths[1];
-                const descLines = doc.splitTextToSize(item.descripcion, columnWidths[2] - 2);
-                doc.text(descLines, currentX, yPos);
-                maxLines = Math.max(maxLines, descLines.length);
-                currentX += columnWidths[2];
-                doc.text(`$${item.precio.toFixed(2)}`, currentX, yPos, { align: 'right', maxWidth: columnWidths[3]-2 });
-                currentX += columnWidths[3];
-                doc.text(`$${(item.cantidad * item.precio).toFixed(2)}`, currentX, yPos, { align: 'right', maxWidth: columnWidths[4]-2 });
-                yPos += maxLines * (doc.getFontSize() * 0.5) + 4;
-                doc.setDrawColor(200, 200, 200);
-                doc.line(startX - 5, yPos -3, startX - 5 + columnWidths.reduce((a,b)=>a+b,0) + 10, yPos -3);
-            });
-            yPos += 5;
+productos.forEach((item) => {
+    // Calcular la altura necesaria para la fila actual
+    const descLines = doc.splitTextToSize(item.descripcion, columnWidths[2] - 2);
+    const textLineHeight = doc.getFontSize() * 0.5; // Altura de una línea de texto
+    const calculatedRowHeight = Math.max(
+        (descLines.length * textLineHeight), // Altura de la descripción
+        doc.getFontSize() * 1 // Altura mínima para una sola línea en otras celdas
+    ) + 4; // Un pequeño padding extra para la línea divisoria
+
+    if (yPos + calculatedRowHeight > 260) { // Verificar si la nueva fila excede el límite
+        doc.addPage();
+        yPos = 20; // Reiniciar yPos para la nueva página
+
+        // Volver a dibujar los encabezados en la nueva página
+        doc.setFillColor(44, 62, 80);
+        doc.rect(startX - 5, yPos - 2, columnWidths.reduce((a, b) => a + b, 0) + 10, 10, 'F');
+        doc.setTextColor(255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        currentX = startX;
+        tableHeaders.forEach((header, i) => {
+            doc.text(header, currentX, yPos + 5);
+            currentX += columnWidths[i];
+        });
+        yPos += 12;
+
+        doc.setTextColor(0);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+    }
+
+    currentX = startX; // Reiniciar X para cada columna de la fila
+
+    // Dibuja la cantidad
+    doc.text(item.cantidad.toString(), currentX, yPos + textLineHeight); // Alineado con la primera línea de descripción si hay varias
+    currentX += columnWidths[0];
+
+    // Dibuja el tipo
+    const tipoText = item.tipo === 'material' ? 'Material' : 'M. Obra';
+    doc.text(tipoText, currentX, yPos + textLineHeight); // Alineado con la primera línea de descripción
+    currentX += columnWidths[1];
+
+    // Dibuja la descripción (ya calculadas las líneas)
+    doc.text(descLines, currentX, yPos + textLineHeight);
+    currentX += columnWidths[2];
+
+    // Dibuja el precio unitario
+    doc.text(`$${item.precio.toFixed(2)}`, currentX + columnWidths[3] - 2, yPos + textLineHeight, { align: 'right' }); // Ajuste para alinear a la derecha dentro de la columna
+    currentX += columnWidths[3];
+
+    // Dibuja el importe
+    doc.text(`$${(item.cantidad * item.precio).toFixed(2)}`, currentX + columnWidths[4] - 2, yPos + textLineHeight, { align: 'right' }); // Ajuste para alinear a la derecha
+    
+    // Avanza yPos para la siguiente fila, basándose en la altura calculada
+    yPos += calculatedRowHeight;
+
+    // Dibuja la línea divisoria
+    doc.setDrawColor(200, 200, 200);
+    doc.line(startX - 5, yPos - 1, startX - 5 + columnWidths.reduce((a,b)=>a+b,0) + 10, yPos - 1); // Ajuste de yPos para que la línea esté al final de la fila
+});
+yPos += 5; // Espacio final después de la tabla
 
             // Totales
             const totalsX = 140;
