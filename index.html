@@ -5,19 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador de Cotizaciones</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-       body {
+        body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #333;
+            background-color: #f3f4f6; /* bg-gray-100 */
+            color: #1f2937; /* text-gray-800 o similar */
         }
         /* Estilos para asegurar que los elementos interactivos sean fácilmente tocables */
         input, select, button {
             min-height: 44px; /* Tamaño mínimo para facilitar el toque */
-            padding: 0.75rem; /* Espaciado interno */
-            border-radius: 0.375rem; /* rounded-md, para consistencia */
+            padding: 0.75rem; /* Espaciado interno (p-3) */
+            border-radius: 0.375rem; /* rounded-md */
+            border: 1px solid #d1d5db; /* border-gray-300 */
         }
-        .producto input {
+        input:focus, select:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: #3b82f6; /* focus:border-blue-500 */
+            box-shadow: 0 0 0 2px #bfdbfe; /* focus:ring-blue-200 (ejemplo) */
+        }
+
+        .producto input, .producto select {
             flex-grow: 1;
         }
         /* Asegurar que el botón de eliminar tenga un tamaño adecuado */
@@ -27,213 +36,208 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        /* Estilos para el contenedor principal y el encabezado */
-        /* Las clases de Tailwind en el HTML ya manejan la mayoría de estos estilos */
-        .container {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background-color: #ffffff;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        } 
-        .header-section {
-            display: flex;
-            align-items: center;
-            justify-content: center; /* Centrar el título */
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .header-title {
-            text-align: center;
-            /* flex-grow: 1; ya no es necesario si solo hay un elemento y se centra */
-        }
-        /* El logo en el HTML es solo un placeholder, el real se inyecta en el PDF */
-        .header-logo {
-            display: none; /* Ocultar el logo del encabezado HTML si no se desea mostrar */
+            padding: 0; /* Reset padding if fixed size */
         }
     </style>
 </head>
 <body class="p-4 sm:p-8">
-    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-lg">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Generador de Cotizaciones</h1>
+    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-xl">
+        <div class="mb-8 pb-4 border-b border-gray-200">
+            <h1 class="text-3xl font-bold text-center text-gray-800">Generador de Cotizaciones</h1>
+        </div>
 
-        <form id="cotizacionForm" class="space-y-4">
-            <div class="mb-4">
-                <label for="cliente" class="block text-gray-700 text-sm font-bold mb-2">Nombre del Cliente:</label>
-                <input type="text" id="cliente" class="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Nombre del Cliente" required>
+        <form id="cotizacionForm" class="space-y-6">
+            <div>
+                <label for="cliente" class="block text-gray-800 text-sm font-bold mb-2">Nombre del Cliente:</label>
+                <input type="text" id="cliente" class="shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nombre del Cliente" required>
+            </div>
+            <div>
+                <label for="solicitante" class="block text-gray-800 text-sm font-bold mb-2">Nombre del Solicitante</label>
+                <input type="text" id="solicitante" class="shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Nombre del Solicitante" required>
+            </div>
+            <div>
+                <label for="unidad" class="block text-gray-800 text-sm font-bold mb-2">UNIDAD (Vehículo):</label>
+                <input type="text" id="unidad" class="shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Kenworth T680 2019 / Proyecto Laminacion y pintura">
+            </div>
+             <div>
+                <label for="tiempoEntrega" class="block text-gray-800 text-sm font-bold mb-2">Tiempo de Entrega:</label>
+                <input type="text" id="tiempoEntrega" class="shadow-sm appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: 5 días hábiles, Inmediata, A convenir">
             </div>
 
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Productos/Servicios:</h2>
-            <div id="productos" class="space-y-3">
-                <div class="producto flex flex-col sm:flex-row gap-2 mb-2 p-2 border rounded-md bg-gray-50">
-                    <input type="text" placeholder="Descripción" class="descripcion p-2 border rounded-md flex-grow" required>
-                    <input type="number" placeholder="Cantidad" class="cantidad p-2 border rounded-md w-full sm:w-24" required min="1">
-                    <input type="number" placeholder="Precio unitario" class="precio p-2 border rounded-md w-full sm:w-32" required min="0.01" step="0.01">
-                    <button type="button" class="eliminar bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors">X</button>
+            <h2 class="text-xl font-semibold text-gray-800 pt-4 border-t border-gray-200">Productos/Servicios:</h2>
+            <div id="productos" class="space-y-4">
+                <div class="producto flex flex-col sm:flex-row items-center gap-3 p-3 border rounded-lg bg-gray-50 shadow-sm">
+                    <select class="tipo-producto p-2 border rounded-md w-full sm:w-auto sm:min-w-[120px] bg-white focus:ring-blue-500 focus:border-blue-500" required>
+                        <option value="material">Material</option>
+                        <option value="mano-de-obra">Mano de obra</option>
+                    </select>
+                    <input type="text" placeholder="Descripción" class="descripcion p-2 border rounded-md flex-grow bg-white focus:ring-blue-500 focus:border-blue-500" required>
+                    <input type="number" placeholder="Cant." class="cantidad p-2 border rounded-md w-full sm:w-20 bg-white focus:ring-blue-500 focus:border-blue-500" required min="1" value="1">
+                    <input type="number" placeholder="P. Unitario" class="precio p-2 border rounded-md w-full sm:w-28 bg-white focus:ring-blue-500 focus:border-blue-500" required min="0.01" step="0.01">
+                    <button type="button" class="eliminar bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors w-full sm:w-auto flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center gap-4 mb-4">
-                <button type="button" id="agregarProducto" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors w-full sm:w-auto">Agregar Producto</button>
-                <div id="ivaSelectContainer"></div> </div>
-            
-            <button type="submit" class="bg-green-500 text-white p-3 rounded-md hover:bg-green-600 transition-colors w-full">Generar Cotización</button>
-        </form>
-
-        <div id="preview" class="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner hidden">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
+                <button type="button" id="agregarProducto" class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors w-full sm:w-auto">
+                    <span class="flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        Agregar Producto
+                    </span>
+                </button>
+                <div id="ivaSelectContainer" class="w-full sm:w-auto">
+                     </div>
             </div>
 
-        <button id="descargarPDF" class="mt-4 bg-purple-600 text-white p-3 rounded-md hover:bg-purple-700 transition-colors w-full hidden">Descargar PDF</button>
+            <button type="submit" class="bg-green-600 text-white p-3 rounded-md hover:bg-green-700 transition-colors w-full text-lg font-semibold">Generar Cotización</button>
+        </form>
+
+        <div id="preview" class="mt-8 p-6 bg-gray-50 rounded-lg shadow-inner hidden">
+            </div>
+
+        <button id="descargarPDF" class="mt-6 bg-purple-600 text-white p-3 rounded-md hover:bg-purple-700 transition-colors w-full hidden text-lg font-semibold">
+             <span class="flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                Descargar PDF
+            </span>
+        </button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Obtener referencias a los elementos del DOM
-            const productosDiv = document.getElementById('productos');
-            const agregarBtn = document.getElementById('agregarProducto');
-            const form = document.getElementById('cotizacionForm');
-            const previewDiv = document.getElementById('preview');
-            const descargarBtn = document.getElementById('descargarPDF');
+    document.addEventListener('DOMContentLoaded', () => {
+        const productosDiv = document.getElementById('productos');
+        const agregarBtn = document.getElementById('agregarProducto');
+        const form = document.getElementById('cotizacionForm');
+        const previewDiv = document.getElementById('preview');
+        const descargarBtn = document.getElementById('descargarPDF');
+        const unidadInput = document.getElementById('unidad');
+        const ivaSelectContainer = document.getElementById('ivaSelectContainer');
 
-            /**
-             * Genera un folio único para la cotización.
-             * El folio se compone de la fecha actual (AA-MM-DD) y un número consecutivo.
-             * El número consecutivo se guarda en localStorage para persistencia.
-             * @returns {string} El folio generado.
-             */
-            function generarFolio() {
-                // Obtener el último número de folio guardado, o 0 si no existe
-                const lastFolio = parseInt(localStorage.getItem('lastFolio') || '0');
-                // Incrementar el número de folio
-                const newFolio = lastFolio + 1;
-                // Guardar el nuevo número de folio en localStorage
-                localStorage.setItem('lastFolio', newFolio.toString());
+        let cotizacionDataParaPDF = null;
 
-                // Obtener la fecha actual
-                const date = new Date();
-                // Obtener los últimos dos dígitos del año
-                const year = date.getFullYear().toString().slice(-2);
-                // Obtener el mes y asegurar que tenga dos dígitos (ej. 01, 12)
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                // Obtener el día y asegurar que tenga dos dígitos (ej. 01, 31)
-                const day = date.getDate().toString().padStart(2, '0');
-
-                // Formatear el folio: COT-AAMMDD-NNN (ej. COT-240526-001)
-                return `COT-${year}${month}${day}-${newFolio.toString().padStart(3, '0')}`;
+        function generarFolio() {
+            const today = new Date();
+            const datePrefix = today.getFullYear().toString().slice(-2) +
+                               (today.getMonth() + 1).toString().padStart(2, '0') +
+                               today.getDate().toString().padStart(2, '0');
+            let lastFolioData = JSON.parse(localStorage.getItem('lastFolioData') || '{}');
+            let consecutivo = 1;
+            if (lastFolioData.date === datePrefix) {
+                consecutivo = (lastFolioData.number || 0) + 1;
             }
+            localStorage.setItem('lastFolioData', JSON.stringify({ date: datePrefix, number: consecutivo }));
+            return `COT-${datePrefix}-${consecutivo.toString().padStart(3, '0')}`;
+        }
 
-            /**
-             * Convierte un número a su representación en letras para cantidades monetarias.
-             * @param {number} num - El número a convertir.
-             * @returns {string} La representación en letras del número.
-             */
-            function numeroALetras(num) {
-                const unidades = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
-                const decenas = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
-                const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
-                const especiales = {
-                    11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
-                    16: 'dieciséis', 17: 'diecisiete', 18: 'dieciocho', 19: 'diecinueve'
-                };
-
-                let entero = Math.floor(num);
-                let decimal = Math.round((num - entero) * 100);
-                let letras = [];
-
-                // Manejo de miles
-                if (entero >= 1000) {
-                    const miles = Math.floor(entero / 1000);
-                    // Recursivamente obtener las letras para los miles
-                    const letrasMiles = numeroALetras(miles).split(' pesos')[0];
-                    if (miles === 1) letras.push('mil');
-                    else letras.push(`${letrasMiles} mil`);
-                    entero %= 1000;
+        function numeroALetras(num) {
+            const unidades = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+            const decenas = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+            const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+            const especiales = {
+                11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
+                16: 'dieciséis', 17: 'diecisiete', 18: 'dieciocho', 19: 'diecinueve',
+                21: 'veintiún', 22: 'veintidós', 23: 'veintitrés', 24: 'veinticuatro', 25: 'veinticinco', 26: 'veintiséis', 27: 'veintisiete', 28: 'veintiocho', 29: 'veintinueve'
+            };
+            let entero = Math.floor(num);
+            let decimal = Math.round((num - entero) * 100);
+            let letras = [];
+            function convertirBloque(n) {
+                let bloqueLetras = [];
+                if (n >= 100) {
+                    if (n === 100) bloqueLetras.push('cien');
+                    else bloqueLetras.push(centenas[Math.floor(n / 100)]);
+                    n %= 100;
                 }
-
-                // Centenas
-                if (entero >= 100) {
-                    if (entero === 100) letras.push('cien');
-                    else letras.push(centenas[Math.floor(entero / 100)]);
-                    entero %= 100;
-                }
-
-                // Decenas y unidades
-                if (entero > 0) {
-                    if (especiales[entero]) {
-                        letras.push(especiales[entero]);
+                if (n > 0) {
+                    if (especiales[n]) {
+                        bloqueLetras.push(especiales[n]);
                     } else {
-                        const d = Math.floor(entero / 10);
-                        const u = entero % 10;
-
+                        const d = Math.floor(n / 10);
+                        const u = n % 10;
                         if (d > 0) {
-                            letras.push(decenas[d]);
-                            if (u > 0 && d > 2) letras.push('y');
+                            bloqueLetras.push(decenas[d]);
+                            if (u > 0 && d > 2) bloqueLetras.push('y');
                         }
-                        if (u > 0) letras.push(unidades[u]);
+                        if (u > 0) bloqueLetras.push(unidades[u]);
                     }
                 }
-
-                // Formateo final
-                let resultado = letras.join(' ').trim();
-
-                // Manejo de casos especiales
-                if (resultado === 'ciento') resultado = 'cien';
-                if (resultado.endsWith(' y')) resultado = resultado.slice(0, -2);
-
-                // Decimales y sufijo
-                const centavos = decimal.toString().padStart(2, '0');
-                return `${resultado} pesos ${centavos}/100 M.N.`.replace(/^ /, '').replace(/\s+/g, ' ');
+                return bloqueLetras.join(' ').replace('  ',' ');
             }
-
-            // Event listener para agregar un nuevo producto
-            agregarBtn.addEventListener('click', () => {
-                const nuevoProducto = document.createElement('div');
-                nuevoProducto.className = 'producto flex flex-col sm:flex-row gap-2 mb-2 p-2 border rounded-md bg-gray-50';
-                nuevoProducto.innerHTML = `
-                    <input type="text" placeholder="Descripción" class="descripcion p-2 border rounded flex-grow" required>
-                    <input type="number" placeholder="Cantidad" class="cantidad p-2 border rounded w-24" required min="1">
-                    <input type="number" placeholder="Precio unitario" class="precio p-2 border rounded w-32" required min="0.01" step="0.01">
-                    <button type="button" class="eliminar bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors">X</button>
-                `;
-                productosDiv.appendChild(nuevoProducto);
-            });
-
-            // Event listener para eliminar un producto
-            productosDiv.addEventListener('click', (e) => {
-                if (e.target.classList.contains('eliminar')) {
-                    e.target.parentElement.remove();
+            if (entero === 0) letras.push('cero');
+            else {
+                const millones = Math.floor(entero / 1000000);
+                if (millones > 0) {
+                    letras.push(convertirBloque(millones) + (millones === 1 ? ' millón' : ' millones'));
+                    entero %= 1000000;
                 }
-            });
+                const miles = Math.floor(entero / 1000);
+                if (miles > 0) {
+                    letras.push((miles === 1 && entero < 2000 && letras.length === 0 ? '' : convertirBloque(miles)) + ' mil');
+                    entero %= 1000;
+                }
+                if (entero > 0) {
+                    letras.push(convertirBloque(entero));
+                }
+            }
+            let resultado = letras.join(' ').trim().replace(/\s+/g, ' ');
+            resultado = resultado.charAt(0).toUpperCase() + resultado.slice(1);
+            const centavos = decimal.toString().padStart(2, '0');
+            return `${resultado} pesos ${centavos}/100 M.N.`;
+        }
 
-            // Crear y añadir el selector de IVA
-            const ivaSelect = document.createElement('select');
-            ivaSelect.className = 'p-2 border rounded mb-4 w-full sm:w-auto focus:ring-blue-500 focus:border-blue-500';
-            ivaSelect.innerHTML = `
-                <option value="0.16">IVA 16%</option>
-                <option value="0.00">Sin IVA</option>
+        function agregarNuevoProducto() {
+            const nuevoProducto = document.createElement('div');
+            nuevoProducto.className = 'producto flex flex-col sm:flex-row items-center gap-3 p-3 border rounded-lg bg-gray-50 shadow-sm';
+            nuevoProducto.innerHTML = `
+                <select class="tipo-producto p-2 border rounded-md w-full sm:w-auto sm:min-w-[120px] bg-white focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="material">Material</option>
+                    <option value="mano-de-obra">Mano de obra</option>
+                </select>
+                <input type="text" placeholder="Descripción" class="descripcion p-2 border rounded-md flex-grow bg-white focus:ring-blue-500 focus:border-blue-500" required>
+                <input type="number" placeholder="Cant." class="cantidad p-2 border rounded-md w-full sm:w-20 bg-white focus:ring-blue-500 focus:border-blue-500" required min="1" value="1">
+                <input type="number" placeholder="P. Unitario" class="precio p-2 border rounded-md w-full sm:w-28 bg-white focus:ring-blue-500 focus:border-blue-500" required min="0.01" step="0.01">
+                <button type="button" class="eliminar bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors w-full sm:w-auto flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </button>
             `;
-            // Insertar el selector de IVA antes del botón de submit del formulario
-            form.insertBefore(ivaSelect, form.querySelector('button[type="submit"]'));
+            productosDiv.appendChild(nuevoProducto);
+        }
+        agregarBtn.addEventListener('click', agregarNuevoProducto);
 
-            /**
-             * Genera el documento PDF de la cotización.
-             * @param {string} cliente - Nombre del cliente.
-             * @param {Array<Object>} productos - Lista de productos con descripción, cantidad y precio.
-             * @param {number} subtotal - Subtotal de la cotización.
-             * @param {number} iva - Monto del IVA.
-             * @param {number} total - Total de la cotización.
-             * @param {string} fecha - Fecha de la cotización.
-             * @param {string} folio - Folio de la cotización.
-             */
-            const generarPDF = (cliente, productos, subtotal, iva, total, fecha, folio) => {
-                const doc = new jspdf.jsPDF(); // Inicializar jsPDF
-                let yPos = 25; // Posición vertical inicial para el contenido
+        productosDiv.addEventListener('click', (e) => {
+            if (e.target.closest('.eliminar')) {
+                e.target.closest('.producto').remove();
+            }
+        });
 
-                // ** CONFIGURACIÓN DEL LOGO EN EL PDF (USANDO BASE64) **
+        const ivaSelect = document.createElement('select');
+        ivaSelect.id = 'iva';
+        ivaSelect.className = 'p-2 border rounded-md w-full sm:w-auto bg-white focus:ring-blue-500 focus:border-blue-500';
+        ivaSelect.innerHTML = `
+            <option value="0.16">IVA 16%</option>
+            <option value="0.08">IVA 8% (Fronterizo)</option>
+            <option value="0.00">Sin IVA / Exento</option>
+        `;
+        ivaSelectContainer.appendChild(ivaSelect);
+
+        const generarPDF = (cliente, solicitante, unidad,tiempoEntrega, productos, subtotalMaterial, subtotalManoDeObra, subtotalGeneral, ivaMonto, total, fecha, folio, tasaIva) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let yPos = 20;
+            
+
+             // ** CONFIGURACIÓN DEL LOGO EN EL PDF (USANDO BASE64) **
                 // Pega tu cadena Base64 aquí. Debe comenzar con 'data:image/<tipo>;base64,'.
                 // Ejemplo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAABaP246AAAAAXNSR0IArs4c6QAAAyhJREFU...'
                 const base64Image = 'data:image/jpeg;base64,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';
@@ -250,213 +254,279 @@
                 }
                 // ** FIN CONFIGURACIÓN DEL LOGO **
 
-                // Encabezado de la cotización
-                doc.setFontSize(14);
-                doc.setTextColor(44, 62, 80); // Color azul oscuro
-                doc.setFont("helvetica", "bold");
-                // Ajustar la posición del título para que no se superponga con el logo
-                doc.text("COTIZACIÓN", 105, 25, { align: 'center' });
 
-                // Información de la empresa (ajustar posición X para que esté a la derecha del logo)
-                const companyInfoX = logoX + logoWidth + 10; // Espacio entre el logo y la información de la empresa
-                doc.setFontSize(9);
-                doc.setTextColor(127, 140, 141); // Color gris
-                doc.text("RAZON SOCIAL: JOSE ALEJANDRO SANCHEZ ROMERO", companyInfoX, 35);
-                doc.text("RFC: SARA970607L59", companyInfoX, 40);
-            
+            doc.setFontSize(16);
+            doc.setTextColor(44, 62, 80);
+            doc.setFont("helvetica", "bold");
+            doc.text("COTIZACIÓN", 105, yPos, { align: 'center' });
+            yPos += 10;
 
-                // Folio de la cotización
-                doc.setFontSize(11);
-                doc.setTextColor(0); // Color negro
-                doc.text(`Folio: ${folio}`, 15, 55); // Posición del folio en el PDF
-
-                // Datos del cliente y fecha
-                doc.text(`Cliente: ${cliente}`, 15, 60);
-                doc.text(`Fecha: ${fecha}`, 15, 65);
-
-                // Leyenda antes de la tabla de productos
-                yPos = 70;
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "italic");
-                doc.text("Por medio de la presente ponemos a su consideración la siguiente cotización detallando los conceptos siguientes:", 15, yPos);
-                yPos += 10; // Espacio después de la leyenda
-
-                // Configuración de la tabla de productos (COLUMNAS AJUSTADAS)
-                const headers = ["Descripción", "Cantidad", "P. Unitario", "Subtotal"];
-                // Nuevas posiciones X para cada columna: Descripción más ancha, Cantidad más estrecha
-                const columns = [15, 95, 125, 165];
-
-                yPos = 75; // Posición inicial de la cabecera de la tabla
-                doc.setFillColor(44, 62, 80); // Color de fondo para la cabecera
-                doc.rect(10, yPos, 190, 8, 'F'); // Dibujar el rectángulo de la cabecera
-
-                // Escribir los encabezados de la tabla
-                doc.setTextColor(255); // Color de texto blanco
-                headers.forEach((header, index) => {
-                    doc.text(header, columns[index], yPos + 6);
-                });
-
-                // Escribir las filas de productos
-                yPos += 12; // Espacio después de la cabecera
-                doc.setTextColor(0); // Color de texto negro
-                productos.forEach((item) => {
-                    if (yPos > 250) { // Si se acerca al final de la página, añadir una nueva página
-                        doc.addPage();
-                        yPos = 30; // Reiniciar la posición Y en la nueva página
-                    }
-
-                    // Dividir la descripción si es muy larga para caber en una línea (ANCHO AJUSTADO)
-                    const descLines = doc.splitTextToSize(item.descripcion, 75);
-                    doc.text(descLines, columns[0], yPos); // Descripción
-                    doc.text(item.cantidad.toString(), columns[1], yPos); // Cantidad
-                    doc.text(`$${item.precio.toFixed(2)}`, columns[2], yPos); // Precio unitario
-                    doc.text(`$${(item.cantidad * item.precio).toFixed(2)}`, columns[3], yPos); // Subtotal por producto
-
-                    // Ajustar la posición Y para el siguiente producto, considerando múltiples líneas de descripción
-                    yPos += Math.max(12, descLines.length * 8);
-                });
-
-                // Totales de la cotización
-                yPos += 20; // Espacio después de la tabla de productos
-                doc.setFontSize(11);
-                doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 150, yPos);
-                doc.text(`IVA (${(ivaSelect.value * 100).toFixed(0)}%): $${iva.toFixed(2)}`, 150, yPos + 8);
-                doc.setFontSize(13);
-                doc.text(`Total: $${total.toFixed(2)}`, 150, yPos + 20);
-
-                // Cantidad en letras (centrada)
-                doc.setFontSize(10);
-                const textoLetras = `Cantidad con letra: ${numeroALetras(total)}`;
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const textWidth = doc.getTextWidth(textoLetras);
-                doc.text(textoLetras, (pageWidth - textWidth) / 2, yPos + 35);
-
-                // Sección de observaciones y datos bancarios
-                yPos += 45; // Espacio después del total
-
-                // Texto en rojo para advertencias
-                doc.setFontSize(9);
-                doc.setTextColor(255, 0, 0); // Color rojo
-                doc.text("* Precios sujetos a cambio sin previo aviso", 15, yPos);
-                doc.text("* Según existencia en almacén", 15, yPos + 5);
-                doc.text("* Cotización vigente 5 días hábiles", 15, yPos + 10);
-
-                // Información bancaria
-                yPos += 20;
-                doc.setTextColor(0); // Color negro
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "bold");
-                doc.text("Información Bancaria para Depósitos y/o Transferencias:", 15, yPos);
-
-                // Detalles bancarios en dos columnas
-                doc.setFont("helvetica", "normal");
-                const column1 = 15;
-                const column2 = 60;
-
-                yPos += 8;
-                doc.text("Banco:", column1, yPos);
-                doc.text("BBVA", column2, yPos);
-
-                yPos += 6;
-                doc.text("Cuenta:", column1, yPos);
-                doc.text("0482562081", column2, yPos);
-
-                yPos += 6;
-                doc.text("CLABE:", column1, yPos);
-                doc.text("012905004825620819", column2, yPos);
-
-                yPos += 6;
-                doc.text("Correo:", column1, yPos);
-                doc.setTextColor(0, 0, 255); // Color azul para el email
-                doc.textWithLink(" rm.detalladoautomotriz@gmail.com", column2, yPos, { url: "mailto: rm.detalladoautomotriz@gmail.com" });
-
-                // Guardar el PDF con un nombre que incluye el folio
-                doc.save(`cotizacion_${cliente}_${folio}.pdf`);
-            };
-
-            /**
-             * Calcula el subtotal, IVA y total de los productos.
-             * @param {Array<Object>} productos - Lista de productos.
-             * @returns {{subtotal: number, iva: number, total: number}} Los totales calculados.
-             */
-            const calcularTotales = (productos) => {
-                // Calcular subtotal sumando el total de cada producto (cantidad * precio)
-                const subtotal = productos.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
-                // Calcular IVA basado en el valor seleccionado en ivaSelect
-                const iva = subtotal * parseFloat(ivaSelect.value);
-                // Calcular el total
-                const total = subtotal + iva;
-                return { subtotal, iva, total };
-            };
-
-            // Event listener para el envío del formulario
-            form.addEventListener('submit', (e) => {
-                e.preventDefault(); // Prevenir el envío por defecto del formulario
-
-                // Obtener los datos del cliente y productos del formulario
-                const cliente = document.getElementById('cliente').value;
-                const productos = Array.from(document.querySelectorAll('.producto')).map(producto => ({
-                    descripcion: producto.querySelector('.descripcion').value,
-                    cantidad: parseFloat(producto.querySelector('.cantidad').value),
-                    precio: parseFloat(producto.querySelector('.precio').value)
-                }));
-
-                // Validar que al menos un producto tenga descripción, cantidad y precio
-                const isValid = productos.every(p => p.descripcion && p.cantidad > 0 && p.precio > 0);
-                if (!isValid) {
-                    // Reemplazar alert con un mensaje en la UI o un modal personalizado
-                    previewDiv.innerHTML = '<p class="text-red-500">Por favor, complete la descripción, cantidad y precio para todos los productos.</p>';
-                    previewDiv.classList.remove('hidden');
-                    descargarBtn.style.display = 'none';
-                    return;
-                }
-
-                // Calcular los totales
-                const { subtotal, iva, total } = calcularTotales(productos);
-                const fecha = new Date().toLocaleDateString(); // Obtener la fecha actual
-                const folio = generarFolio(); // ¡Generar el folio aquí!
-
-                // Actualizar la vista previa con los datos de la cotización, incluyendo el folio
-                previewDiv.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-2">Vista Previa</h3>
-                    <p class="mb-1"><strong>Folio:</strong> ${folio}</p>
-                    <p class="mb-1"><strong>Cliente:</strong> ${cliente}</p>
-                    <p class="mb-4"><strong>Fecha:</strong> ${fecha}</p>
-                    <table class="min-w-full bg-white border border-gray-300 rounded-md overflow-hidden mb-4">
-                        <thead class="bg-gray-200">
-                            <tr>
-                                <th class="py-2 px-4 border-b text-left">Descripción</th>
-                                <th class="py-2 px-4 border-b text-left">Cantidad</th>
-                                <th class="py-2 px-4 border-b text-left">P. Unitario</th>
-                                <th class="py-2 px-4 border-b text-left">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${productos.map(item => `
-                                <tr>
-                                    <td class="py-2 px-4 border-b">${item.descripcion}</td>
-                                    <td class="py-2 px-4 border-b">${item.cantidad}</td>
-                                    <td class="py-2 px-4 border-b">$${item.precio.toFixed(2)}</td>
-                                    <td class="py-2 px-4 border-b">$${(item.cantidad * item.precio).toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    <div class="totales text-right text-lg">
-                        <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
-                        <p><strong>IVA:</strong> $${iva.toFixed(2)}</p>
-                        <h4 class="font-bold text-xl mt-2">Total: $${total.toFixed(2)}</h4>
-                    </div>
-                `;
-
-                // Mostrar la vista previa
-                previewDiv.classList.remove('hidden');
-
-                // Mostrar el botón de descarga y configurarlo para generar el PDF con el folio
-                descargarBtn.style.display = 'block';
-                descargarBtn.onclick = () => generarPDF(cliente, productos, subtotal, iva, total, fecha, folio); // ¡Pasar el folio a generarPDF!
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont("helvetica", "normal");
+            const companyInfo = [
+                "RAZON SOCIAL: JOSE ALEJANDRO SANCHEZ ROMERO",
+                "RFC: SARA970607L59",
+                "circuito 8, Geo villas del puerto.",
+                "Veracruz, Ver, CP 91808",
+                "rm.detalladoautomotriz@gmail.com"
+            ];
+            let companyInfoYStart = yPos -5; // Alinearlo mejor con el título
+            companyInfo.forEach(line => {
+                doc.text(line, 200, companyInfoYStart, { align: 'right' });
+                companyInfoYStart += 4;
             });
+            
+            yPos = Math.max(yPos, logoY + logoHeight + 10); 
+
+            doc.setFontSize(11);
+            doc.setTextColor(0);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Folio: ${folio}`, 15, yPos);
+            yPos += 6;
+            doc.setFont("helvetica", "normal");
+            doc.text(`Fecha: ${fecha}`, 15, yPos);
+            yPos += 10;
+
+            doc.setFont("helvetica", "bold");
+            doc.text(`Cliente:`, 15, yPos);
+            doc.setFont("helvetica", "normal");
+            doc.text(cliente, 35, yPos);
+            yPos += 4;
+            
+            doc.setFont("helvetica", "bold");
+            doc.text(`Solicitante:`, 15, yPos);
+            doc.setFont("helvetica", "normal");
+            doc.text(solicitante, 45, yPos);
+            yPos += 5;
+
+            if (unidad) {
+                doc.setFont("helvetica", "bold");
+                doc.text(`Unidad/Proyecto:`, 15, yPos);
+                doc.setFont("helvetica", "normal");
+                doc.text(unidad, 50, yPos);
+                yPos += 2;
+            }
+            yPos += 3;
+            // MODIFICADO: Añadir Tiempo de Entrega al PDF
+            if (tiempoEntrega) {
+                doc.setFont("helvetica", "bold"); doc.text(`Tiempo de Entrega:`, 15, yPos);
+                doc.setFont("helvetica", "normal"); doc.text(tiempoEntrega, 53, yPos); yPos += 4;
+            }
+            yPos += 3;
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "italic");
+            const leyenda = "Por medio de la presente ponemos a su consideración la siguiente cotización detallando los conceptos siguientes:";
+            const leyendaLines = doc.splitTextToSize(leyenda, 180);
+            doc.text(leyendaLines, 10, yPos);
+            yPos += leyendaLines.length * 3 + 3;
+
+            const tableHeaders = ["Cant.", "Tipo", "Descripción", "P. Unitario", "Importe"];
+            const columnWidths = [15, 30, 85, 30, 30];
+            const startX = 15;
+            let currentX = startX;
+
+            doc.setFillColor(44, 62, 80);
+            doc.rect(startX - 5, yPos - 2, columnWidths.reduce((a, b) => a + b, 0) + 10, 10, 'F');
+            doc.setTextColor(255);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+
+            tableHeaders.forEach((header, i) => {
+                doc.text(header, currentX, yPos + 5);
+                currentX += columnWidths[i];
+            });
+            yPos += 12;
+
+            doc.setTextColor(0);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8.5);
+
+            productos.forEach((item) => {
+                if (yPos > 260) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                currentX = startX;
+                const rowHeight = 8;
+                let maxLines = 1;
+                doc.text(item.cantidad.toString(), currentX, yPos);
+                currentX += columnWidths[0];
+                const tipoText = item.tipo === 'material' ? 'Material' : 'M. Obra';
+                doc.text(tipoText, currentX, yPos);
+                currentX += columnWidths[1];
+                const descLines = doc.splitTextToSize(item.descripcion, columnWidths[2] - 2);
+                doc.text(descLines, currentX, yPos);
+                maxLines = Math.max(maxLines, descLines.length);
+                currentX += columnWidths[2];
+                doc.text(`$${item.precio.toFixed(2)}`, currentX, yPos, { align: 'right', maxWidth: columnWidths[3]-2 });
+                currentX += columnWidths[3];
+                doc.text(`$${(item.cantidad * item.precio).toFixed(2)}`, currentX, yPos, { align: 'right', maxWidth: columnWidths[4]-2 });
+                yPos += maxLines * (doc.getFontSize() * 0.5) + 4;
+                doc.setDrawColor(200, 200, 200);
+                doc.line(startX - 5, yPos -3, startX - 5 + columnWidths.reduce((a,b)=>a+b,0) + 10, yPos -3);
+            });
+            yPos += 5;
+
+            // Totales
+            const totalsX = 140;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+
+            doc.text("Subtotal Material:", totalsX, yPos, { align: 'right' });
+            doc.text(`$${subtotalMaterial.toFixed(2)}`, 200, yPos, { align: 'right' });
+            yPos += 7;
+
+            doc.text("Subtotal Mano de Obra:", totalsX, yPos, { align: 'right' });
+            doc.text(`$${subtotalManoDeObra.toFixed(2)}`, 200, yPos, { align: 'right' });
+            yPos += 7;
+
+            doc.setDrawColor(150, 150, 150); 
+            doc.line(totalsX - 30, yPos - 3.5, 200, yPos - 3.5); 
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Subtotal General:", totalsX, yPos, { align: 'right' });
+            doc.setFont("helvetica", "normal");
+            doc.text(`$${subtotalGeneral.toFixed(2)}`, 200, yPos, { align: 'right' });
+            yPos += 7;
+
+
+            if (ivaMonto > 0) {
+                doc.text(`IVA (${(tasaIva * 100).toFixed(0)}%):`, totalsX, yPos, { align: 'right' });
+                doc.text(`$${ivaMonto.toFixed(2)}`, 200, yPos, { align: 'right' });
+                yPos += 7;
+            }
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Total:", totalsX, yPos, { align: 'right' });
+            doc.text(`$${total.toFixed(2)}`, 200, yPos, { align: 'right' });
+            yPos += 10;
+
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.text("Total con letra:", 15, yPos);
+            yPos += 5;
+            const totalEnLetras = numeroALetras(total);
+            const letrasLines = doc.splitTextToSize(`(${totalEnLetras.toUpperCase()})`, 180);
+            doc.setFont("helvetica", "bolditalic");
+            doc.text(letrasLines, 15, yPos);
+            yPos += letrasLines.length * 5 + 10;
+
+            if (yPos > 220) { doc.addPage(); yPos = 20; }
+            doc.setFontSize(8);
+            doc.setFont("helvetica", "normal");
+            doc.text("Condiciones:", 15, yPos); yPos +=4;
+            doc.text("- Precios sujetos a cambio sin previo aviso.", 15, yPos); yPos +=4;
+            doc.text("- Vigencia de la cotización: 8 días.", 15, yPos); yPos +=4;
+            doc.text("- Según existencia en almacén.", 15, yPos); yPos +=8;
+            doc.setFontSize(12); // Puedes ajustar este valor (e.g., 10, 14, etc.)
+            doc.text("Autorizacion del cliente:", 105, yPos + 10, {align: 'center'});
+            yPos += 25;
+            doc.line(80, yPos, 130, yPos);
+            doc.setFontSize(12); // Puedes ajustar este valor (e.g., 10, 14, etc.)
+            doc.text("Nombre y firma del cliente", 105, yPos + 5, {align: 'center'});
+
+            doc.save(`COTIZACION-${folio}-${cliente.replace(/\s+/g, '_')}.pdf`);
+        };
+
+       form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const cliente = document.getElementById('cliente').value.trim();
+            const solicitante = document.getElementById('solicitante').value.trim();
+            const unidad = document.getElementById('unidad').value.trim(); // Corregido para usar el ID correcto
+            const tiempoEntrega = document.getElementById('tiempoEntrega').value.trim(); // LEER NUEVO CAMPO
+            const productosNodes = productosDiv.querySelectorAll('.producto');
+            const tasaIva = parseFloat(document.getElementById('iva').value);
+
+            const productos = [];
+            let subtotalMaterial = 0;
+            let subtotalManoDeObra = 0;
+
+            productosNodes.forEach(node => {
+                const tipo = node.querySelector('.tipo-producto').value;
+                const descripcion = node.querySelector('.descripcion').value.trim();
+                const cantidad = parseInt(node.querySelector('.cantidad').value);
+                const precio = parseFloat(node.querySelector('.precio').value);
+
+                if (descripcion && !isNaN(cantidad) && cantidad > 0 && !isNaN(precio) && precio >= 0) {
+                    const importe = cantidad * precio;
+                    productos.push({ tipo, descripcion, cantidad, precio, importe });
+                    if (tipo === 'material') {
+                        subtotalMaterial += importe;
+                    } else if (tipo === 'mano-de-obra') {
+                        subtotalManoDeObra += importe;
+                    }
+                }
+            });
+
+            if (productos.length === 0) {
+                previewDiv.innerHTML = `<p class="text-red-500 font-semibold">Debe agregar al menos un producto o servicio válido.</p>`;
+                previewDiv.classList.remove('hidden');
+                descargarBtn.classList.add('hidden');
+                return;
+            }
+
+            const subtotalGeneral = subtotalMaterial + subtotalManoDeObra;
+            const ivaMonto = subtotalGeneral * tasaIva;
+            const total = subtotalGeneral + ivaMonto;
+            const fecha = new Date().toLocaleDateString('es-MX', {year: 'numeric', month: 'long', day: 'numeric'});
+            const folio = generarFolio();
+
+           // MODIFICADO: Guardar tiempoEntrega para el PDF
+            cotizacionDataParaPDF = { cliente, solicitante, unidad, tiempoEntrega, productos, subtotalMaterial, subtotalManoDeObra, subtotalGeneral, ivaMonto, total, fecha, folio, tasaIva };
+
+            // MODIFICADO: Mostrar tiempoEntrega en la vista previa
+            previewDiv.innerHTML = `
+                <h3 class="text-xl font-semibold mb-3 text-gray-700">Vista Previa de Cotización</h3>
+                <div class="space-y-1 text-sm">
+                    <p><strong>Folio:</strong> ${folio}</p>
+                    <p><strong>Cliente:</strong> ${cliente}</p>
+                    <p><strong>Solicitante:</strong> ${solicitante}</p>
+                    ${unidad ? `<p><strong>Unidad/Proyecto:</strong> ${unidad}</p>` : ''}
+                    ${tiempoEntrega ? `<p><strong>Tiempo de Entrega:</strong> ${tiempoEntrega}</p>` : ''}
+                    <p><strong>Fecha:</strong> ${fecha}</p>
+                </div>
+                <hr class="my-3 border-gray-300">
+                <div class="space-y-1 text-sm">
+                    <p><strong>Subtotal Material:</strong> <span class="float-right">$${subtotalMaterial.toFixed(2)}</span></p>
+                    <p><strong>Subtotal Mano de Obra:</strong> <span class="float-right">$${subtotalManoDeObra.toFixed(2)}</span></p>
+                </div>
+                <hr class="my-2 border-gray-300">
+                <p class="text-sm"><strong>Subtotal General:</strong> <span class="float-right">$${subtotalGeneral.toFixed(2)}</span></p>
+                <p class="text-sm"><strong>IVA (${(tasaIva * 100).toFixed(0)}%):</strong> <span class="float-right">$${ivaMonto.toFixed(2)}</span></p>
+                <hr class="my-2 border-gray-300">
+                <p class="font-bold text-lg"><strong>TOTAL:</strong> <span class="float-right">$${total.toFixed(2)}</span></p>
+                <p class="mt-3 text-xs text-gray-600 break-all"><em>(${numeroALetras(total)})</em></p>
+            `;
+            previewDiv.classList.remove('hidden');
+            descargarBtn.classList.remove('hidden');
         });
+
+        descargarBtn.addEventListener('click', () => {
+            if (cotizacionDataParaPDF) {
+                generarPDF(
+                    cotizacionDataParaPDF.cliente,
+                    cotizacionDataParaPDF.solicitante,
+                    cotizacionDataParaPDF.unidad,
+                    cotizacionDataParaPDF.tiempoEntrega, // Nuevo parámetro
+                    cotizacionDataParaPDF.productos,
+                    cotizacionDataParaPDF.subtotalMaterial,
+                    cotizacionDataParaPDF.subtotalManoDeObra,
+                    cotizacionDataParaPDF.subtotalGeneral,
+                    cotizacionDataParaPDF.ivaMonto,
+                    cotizacionDataParaPDF.total,
+                    cotizacionDataParaPDF.fecha,
+                    cotizacionDataParaPDF.folio,
+                    cotizacionDataParaPDF.tasaIva
+                );
+            } else {
+                console.error("No hay datos de cotización para generar el PDF.");
+                 previewDiv.innerHTML = `<p class="text-red-500 font-semibold">Primero genere una cotización para poder descargar el PDF.</p>`;
+                previewDiv.classList.remove('hidden');
+            }
+        });
+    });
     </script>
 </body>
 </html>
